@@ -11,7 +11,7 @@ public class Db {
     private static final String URL = System.getProperty("db.url",
             "jdbc:mysql://localhost:3306/academia_futebol?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Recife");
     private static final String USUARIO = System.getProperty("db.user", "root");
-    private static final String SENHA = System.getProperty("db.password", "sua_senha_aqui");
+    private static final String SENHA = System.getProperty("db.password", "sua-senha-aqui");
     // ===================================================================================
 
     /** Resultado de um SELECT: nomes das colunas + linhas. */
@@ -28,19 +28,7 @@ public class Db {
     public static Resultado consultar(String sql, Object... params) throws SQLException {
         try (Connection con = conectar(); PreparedStatement ps = con.prepareStatement(sql)) {
             preencher(ps, params);
-            try (ResultSet rs = ps.executeQuery()) {
-                ResultSetMetaData md = rs.getMetaData();
-                int n = md.getColumnCount();
-                List<String> colunas = new ArrayList<>();
-                for (int i = 1; i <= n; i++) colunas.add(md.getColumnLabel(i));
-                List<Object[]> linhas = new ArrayList<>();
-                while (rs.next()) {
-                    Object[] linha = new Object[n];
-                    for (int i = 1; i <= n; i++) linha[i - 1] = rs.getObject(i);
-                    linhas.add(linha);
-                }
-                return new Resultado(colunas, linhas);
-            }
+            try (ResultSet rs = ps.executeQuery()) { return ler(rs); }
         }
     }
 
@@ -50,6 +38,40 @@ public class Db {
             preencher(ps, params);
             return ps.executeUpdate();
         }
+    }
+
+    /** Chama um procedimento (CALL) e devolve o resultado do SELECT que ele produz (ou vazio). */
+    public static Resultado chamar(String sql, Object... params) throws SQLException {
+        try (Connection con = conectar(); CallableStatement cs = con.prepareCall(sql)) {
+            preencher(cs, params);
+            boolean temResultado = cs.execute();
+            while (!temResultado && cs.getUpdateCount() != -1) temResultado = cs.getMoreResults();
+            if (!temResultado) return new Resultado(List.of(), List.of());
+            try (ResultSet rs = cs.getResultSet()) { return ler(rs); }
+        }
+    }
+
+    private static Resultado ler(ResultSet rs) throws SQLException {
+        ResultSetMetaData md = rs.getMetaData();
+        int n = md.getColumnCount();
+        List<String> colunas = new ArrayList<>();
+        for (int i = 1; i <= n; i++) colunas.add(md.getColumnLabel(i));
+        List<Object[]> linhas = new ArrayList<>();
+        while (rs.next()) {
+            Object[] linha = new Object[n];
+            for (int i = 1; i <= n; i++) linha[i - 1] = rs.getObject(i);
+            linhas.add(linha);
+        }
+        return new Resultado(colunas, linhas);
+    }
+
+    /** Junta parâmetros (listas e valores soltos) num array só para o PreparedStatement. */
+    public static Object[] params(Object... partes) {
+        List<Object> todos = new ArrayList<>();
+        for (Object p : partes) {
+            if (p instanceof List<?> l) todos.addAll(l); else todos.add(p);
+        }
+        return todos.toArray();
     }
 
     public static void preencher(PreparedStatement ps, Object... params) throws SQLException {
@@ -66,6 +88,8 @@ public class Db {
             case 1451 -> "Não dá pra excluir: existem registros ligados a esse item (restrição de chave estrangeira).";
             case 1452 -> "Referência inválida: o item escolhido não existe mais.";
             case 3819, 4025 -> "Valor fora das regras do banco (CHECK). Confira os campos.";
+            // SIGNAL SQLSTATE '45000' dos procedimentos e triggers: mostra a mensagem que o banco mandou
+            case 1644 -> e.getMessage();
             case 1406 -> "Algum texto passou do tamanho máximo permitido.";
             default -> "Erro do banco: " + e.getMessage();
         };

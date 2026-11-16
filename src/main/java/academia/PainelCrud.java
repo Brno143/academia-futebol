@@ -34,6 +34,8 @@ public abstract class PainelCrud extends JPanel {
         });
 
         JPanel botoes = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        botoes.add(new JLabel("Buscar:"));
+        botoes.add(Ui.filtroTabela(tabela));
         botoes.add(novo);
         botoes.add(editar);
         botoes.add(excluir);

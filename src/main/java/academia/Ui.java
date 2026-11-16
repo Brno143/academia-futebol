@@ -14,6 +14,11 @@ public class Ui {
     public static final Color VERDE = new Color(0x1F7A3E);
     public static final Color VERMELHO = new Color(0xC8553D);
     public static final Color AMARELO = new Color(0xE0A526);
+    public static final Color AZUL = new Color(0x2E6FAD);
+    /** Paleta usada nos gráficos com várias séries/fatias. */
+    public static final Color[] PALETA = {
+            new Color(0x1F7A3E), new Color(0x2E6FAD), new Color(0xE0A526), new Color(0xC8553D),
+            new Color(0x7A4FA3), new Color(0x2A9D8F), new Color(0x8C6D46), new Color(0x6B7B72)};
 
     /** Item de combo: guarda o código (id) e mostra o texto. */
     public record Item(Object id, String texto) {
@@ -46,6 +51,7 @@ public class Ui {
         };
         for (Object[] linha : r.linhas()) m.addRow(linha);
         tabela.setModel(m);
+        tabela.setRowSorter(new javax.swing.table.TableRowSorter<>(m));
     }
 
     public static JTable novaTabela() {
@@ -107,6 +113,61 @@ public class Ui {
 
     public static JSpinner campoNumero(int valor, int min, int max) {
         return new JSpinner(new SpinnerNumberModel(valor, min, max, 1));
+    }
+
+    public static JSpinner campoDecimal(double valor, double min, double max, double passo) {
+        JSpinner s = new JSpinner(new SpinnerNumberModel(valor, min, max, passo));
+        s.setEditor(new JSpinner.NumberEditor(s, "0.00"));
+        return s;
+    }
+
+    /** Título grande de tela. */
+    public static JLabel titulo(String texto) {
+        JLabel t = new JLabel(texto);
+        t.setFont(t.getFont().deriveFont(Font.BOLD, 20f));
+        return t;
+    }
+
+    /** Cartão de indicador (rótulo, valor grande e detalhe). Devolve {valor, detalhe} para atualizar depois. */
+    public static JLabel[] cartao(JPanel destino, String rotulo) {
+        JPanel card = new JPanel(new BorderLayout(0, 2));
+        card.setBackground(new Color(0xEEF4EF));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 4, 0, 0, VERDE),
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)));
+        JLabel r = new JLabel(rotulo);
+        r.setForeground(new Color(0x4A5A50));
+        JLabel v = new JLabel("-");
+        v.setFont(v.getFont().deriveFont(Font.BOLD, 22f));
+        v.setForeground(VERDE);
+        JLabel d = new JLabel(" ");
+        d.setForeground(new Color(0x6B7B72));
+        d.setFont(d.getFont().deriveFont(11f));
+        card.add(r, BorderLayout.NORTH);
+        card.add(v, BorderLayout.CENTER);
+        card.add(d, BorderLayout.SOUTH);
+        destino.add(card);
+        return new JLabel[]{v, d};
+    }
+
+    /** Campo de texto que filtra as linhas de uma JTable enquanto o usuário digita. */
+    public static JTextField filtroTabela(JTable tabela) {
+        JTextField f = new JTextField(18);
+        f.setToolTipText("Digite para filtrar as linhas da tabela");
+        f.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            void aplicar() {
+                if (!(tabela.getRowSorter() instanceof javax.swing.table.TableRowSorter<?> rs)) return;
+                String t = f.getText().trim();
+                @SuppressWarnings("unchecked")
+                javax.swing.table.TableRowSorter<javax.swing.table.TableModel> sorter =
+                        (javax.swing.table.TableRowSorter<javax.swing.table.TableModel>) rs;
+                sorter.setRowFilter(t.isEmpty() ? null : RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(t)));
+            }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { aplicar(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { aplicar(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { aplicar(); }
+        });
+        return f;
     }
 
     public static String texto(JTextField f) {

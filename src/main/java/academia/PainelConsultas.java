@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.sql.SQLException;
 
-/** Lista as consultas; ao escolher uma, mostra o SQL e executa no banco. */
+/** Consultas da Etapa 03. Lista as consultas; ao escolher uma, mostra o SQL e executa no banco. */
 public class PainelConsultas extends JPanel {
 
     private final JList<Consultas.Consulta> lista = new JList<>(Consultas.TODAS.toArray(new Consultas.Consulta[0]));
@@ -46,7 +46,13 @@ public class PainelConsultas extends JPanel {
         JPanel direita = new JPanel(new BorderLayout(0, 8));
         direita.add(topo, BorderLayout.NORTH);
         direita.add(new JScrollPane(tabela), BorderLayout.CENTER);
-        direita.add(total, BorderLayout.SOUTH);
+        JPanel rodape = new JPanel(new BorderLayout());
+        JPanel busca = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        busca.add(new JLabel("Buscar no resultado:"));
+        busca.add(Ui.filtroTabela(tabela));
+        rodape.add(busca, BorderLayout.WEST);
+        rodape.add(total, BorderLayout.EAST);
+        direita.add(rodape, BorderLayout.SOUTH);
 
         add(esquerda, BorderLayout.WEST);
         add(direita, BorderLayout.CENTER);

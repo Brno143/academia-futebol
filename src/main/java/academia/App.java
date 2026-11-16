@@ -5,7 +5,7 @@ import java.awt.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-/** Academia de Base - Etapa 03. Interface Swing + JDBC (MySQL), sem ORM. */
+/** Academia de Base - Etapa 06 (versão final). Interface Swing + JDBC (MySQL), sem ORM. */
 public class App {
 
     public static void main(String[] args) {
@@ -31,24 +31,26 @@ public class App {
         }
 
         PainelDashboard painel = new PainelDashboard();
-        PainelEstatistica estatistica = new PainelEstatistica();
-        PainelAtletas atletas = new PainelAtletas();
-        PainelJogos jogos = new PainelJogos();
-        PainelAdversarios adversarios = new PainelAdversarios();
+        PainelViews views = new PainelViews();
+        PainelRotinas rotinas = new PainelRotinas();
 
         JTabbedPane abas = new JTabbedPane();
-        abas.addTab("Painel", painel);
-        abas.addTab("Estatística", estatistica);
-        abas.addTab("Consultas", new PainelConsultas());
-        abas.addTab("Atletas", atletas);
-        abas.addTab("Jogos", jogos);
-        abas.addTab("Adversários", adversarios);
+        abas.addTab("Dashboard", painel);
+        abas.addTab("Views e Consultas Avançadas", views);
+        abas.addTab("Funções, Procedimentos e Triggers", rotinas);
+        abas.addTab("Consultas (Etapa 03)", new PainelConsultas());
+        abas.addTab("Atletas", new PainelAtletas());
+        abas.addTab("Jogos", new PainelJogos());
+        abas.addTab("Adversários", new PainelAdversarios());
+        abas.addTab("Escalações", new PainelEscalacoes());
+        abas.addTab("Avaliações Físicas", new PainelAvaliacoes());
 
         // recarrega os dados sempre que troca de aba (pra refletir inserções/exclusões)
         abas.addChangeListener(e -> {
             Component atual = abas.getSelectedComponent();
             if (atual == painel) painel.carregar();
-            else if (atual == estatistica) estatistica.carregar();
+            else if (atual == views) views.carregar();
+            else if (atual == rotinas) rotinas.carregar();
             else if (atual instanceof PainelCrud crud) crud.carregar();
         });
         painel.carregar();
@@ -56,8 +58,9 @@ public class App {
         JFrame frame = new JFrame("Academia de Base - Gerenciamento");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setContentPane(abas);
-        frame.setSize(1200, 780);
+        frame.setSize(1366, 860);
         frame.setLocationRelativeTo(null);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setVisible(true);
     }
 }
