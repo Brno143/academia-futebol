@@ -15,7 +15,7 @@ public class PainelRotinas extends JPanel {
     // ---- funções ----
     private final JTable tAprov = Ui.novaTabela();
     private final GraficoBarras gAprov = new GraficoBarras("fn_aproveitamento_categoria(cod_categoria)");
-    private final JComboBox<Ui.Item> catFreq = new JComboBox<>();
+    private final BarraFiltros filtros = new BarraFiltros(this::carregar);
     private final JTable tFreq = Ui.novaTabela();
     private final GraficoPizza gFreq = new GraficoPizza("Situação de frequência (fn_situacao_frequencia)");
 
@@ -37,7 +37,10 @@ public class PainelRotinas extends JPanel {
     public PainelRotinas() {
         super(new BorderLayout(0, 8));
         setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
-        add(Ui.titulo("Funções, procedimentos e triggers (Etapa 05)"), BorderLayout.NORTH);
+        JPanel topo = new JPanel(new BorderLayout(0, 4));
+        topo.add(Ui.titulo("Funções, procedimentos e triggers (Etapa 05)"), BorderLayout.NORTH);
+        topo.add(filtros, BorderLayout.CENTER);
+        add(topo, BorderLayout.NORTH);
 
         JTabbedPane abas = new JTabbedPane();
         abas.addTab("Funções", funcoes());
@@ -87,14 +90,11 @@ public class PainelRotinas extends JPanel {
 
         JPanel b2 = bloco("fn_situacao_frequencia",
                 "Recebe o atleta e classifica a frequência nos treinos: Regular (≥ 75%), Atenção (50% a 74,9%), "
-                        + "Crítica (< 50%) ou Sem registro. Escolha a categoria para filtrar.");
+                        + "Crítica (< 50%) ou Sem registro. Usa a categoria escolhida nos filtros.");
         JPanel filtro = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        filtro.add(new JLabel("Categoria:"));
-        filtro.add(catFreq);
         JButton exec2 = new JButton("Executar função");
         exec2.addActionListener(e -> carregarFrequencia());
         filtro.add(exec2);
-        catFreq.addActionListener(e -> { if (catFreq.isFocusOwner()) carregarFrequencia(); });
         JTextField busca = Ui.filtroTabela(tFreq);
         filtro.add(new JLabel("  Buscar:"));
         filtro.add(busca);
@@ -115,7 +115,9 @@ public class PainelRotinas extends JPanel {
             Db.Resultado r = Db.consultar("""
                     SELECT nome_categoria AS categoria,
                            fn_aproveitamento_categoria(cod_categoria) AS aproveitamento_pct
-                      FROM CATEGORIA ORDER BY idade_min""");
+                      FROM CATEGORIA
+                     WHERE (? IS NULL OR cod_categoria = ?)
+                     ORDER BY idade_min""", filtros.codCategoria(), filtros.codCategoria());
             Ui.preencherTabela(tAprov, r);
             gAprov.setDados(r);
             gAprov.setSufixo("%");
@@ -127,7 +129,7 @@ public class PainelRotinas extends JPanel {
 
     private void carregarFrequencia() {
         try {
-            Object cat = catFreq.getSelectedItem() == null ? null : Ui.idSelecionado(catFreq);
+            Object cat = filtros.codCategoria();
             Db.Resultado r = Db.consultar("""
                     SELECT p.nome AS atleta, c.nome_categoria AS categoria, f.pct_presenca,
                            fn_situacao_frequencia(a.cod_pessoa) AS situacao
@@ -286,7 +288,10 @@ public class PainelRotinas extends JPanel {
                            l.usuario, DATE_FORMAT(l.data_alteracao, '%d/%m/%Y %H:%i:%s') AS quando
                       FROM LOG_PLACAR l
                       LEFT JOIN vw_resultado_jogos v ON v.cod_jogo = l.cod_jogo
-                     ORDER BY l.cod_log DESC""");
+                     WHERE v.data_jogo BETWEEN ? AND ?
+                       AND (? IS NULL OR v.cod_categoria = ?)
+                     ORDER BY l.cod_log DESC""",
+                    filtros.de(), filtros.ate(), filtros.codCategoria(), filtros.codCategoria());
             Ui.preencherTabela(tLog, r);
             Ui.preencherTabela(tLogProc, r);
         } catch (SQLException e) { Ui.erro(this, e); }
@@ -314,6 +319,7 @@ public class PainelRotinas extends JPanel {
 
     // =========================================================================
     public void carregar() {
+        filtros.recarregarOpcoes();
         carregarCombos();
         carregarAproveitamento();
         carregarFrequencia();
@@ -325,23 +331,24 @@ public class PainelRotinas extends JPanel {
         carregandoCombos = true;
         try {
             Object j = jogoPlacar.getSelectedItem() == null ? null : Ui.idSelecionado(jogoPlacar);
-            Object c = catFreq.getSelectedItem() == null ? null : Ui.idSelecionado(catFreq);
             Object a = atletaTeste.getSelectedItem() == null ? null : Ui.idSelecionado(atletaTeste);
             Object jt = jogoTeste.getSelectedItem() == null ? null : Ui.idSelecionado(jogoTeste);
             String sqlJogos = """
                     SELECT cod_jogo, CONCAT('#', cod_jogo, ' · ', DATE_FORMAT(data_jogo, '%d/%m'), ' · ', categoria,
                                             ' x ', adversario, '  (', gols_pro, ' x ', gols_contra, ')')
-                      FROM vw_resultado_jogos ORDER BY data_jogo, cod_jogo""";
-            trocar(jogoPlacar, Db.consultar(sqlJogos), false);
-            trocar(jogoTeste, Db.consultar(sqlJogos), false);
-            trocar(catFreq, Db.consultar("SELECT cod_categoria, nome_categoria FROM CATEGORIA ORDER BY idade_min"), true);
+                      FROM vw_resultado_jogos
+                     WHERE data_jogo BETWEEN ? AND ?
+                       AND (? IS NULL OR cod_categoria = ?)
+                     ORDER BY data_jogo, cod_jogo""";
+            Object[] p = {filtros.de(), filtros.ate(), filtros.codCategoria(), filtros.codCategoria()};
+            trocar(jogoPlacar, Db.consultar(sqlJogos, p), false);
+            trocar(jogoTeste, Db.consultar(sqlJogos, p), false);
             trocar(atletaTeste, Db.consultar("""
                     SELECT a.cod_pessoa, CONCAT(p.nome, ' (', c.nome_categoria, ')')
                       FROM ATLETA a JOIN PESSOA p ON p.cod_pessoa = a.cod_pessoa
                       JOIN CATEGORIA c ON c.cod_categoria = a.cod_categoria
                      ORDER BY c.idade_min, p.nome"""), false);
             if (j != null) Ui.selecionar(jogoPlacar, j);
-            if (c != null) Ui.selecionar(catFreq, c);
             if (a != null) Ui.selecionar(atletaTeste, a);
             if (jt != null) Ui.selecionar(jogoTeste, jt);
         } catch (SQLException e) {
