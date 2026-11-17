@@ -118,7 +118,7 @@ public class PainelViews extends JPanel {
         filtros.usarPeriodo(it.usaPeriodo);
         resultado.setEnabled(it.titulo.startsWith("View 2"));
         titulo.setText(it.titulo);
-        descricao.setText("<html>" + it.descricao + "<br><i>Filtros aplicados: "
+        descricao.setText("<html><i>Filtros aplicados: "
                 + (it.usaCategoria ? (filtros.nomeCategoria() == null ? "todas as categorias" : filtros.nomeCategoria()) : "—")
                 + (it.usaPeriodo ? " · período " + filtros.descricao().replaceFirst("^.*· ", "") : "") + "</i></html>");
         sql.setText(it.sql().strip());
