@@ -11,6 +11,7 @@ import java.util.List;
  * Barra de filtros reutilizada no Painel, nas Views e nas Rotinas:
  * categoria (ou todas) e período (de / até). Gera os trechos de WHERE com "?"
  * e a lista de parâmetros para o PreparedStatement.
+ * Os valores são compartilhados: mudar o filtro numa aba muda em todas as outras.
  */
 public class BarraFiltros extends JPanel {
 
@@ -23,6 +24,9 @@ public class BarraFiltros extends JPanel {
     private final JButton limpar = new JButton("Limpar");
     private LocalDate menorData = LocalDate.now(), maiorData = LocalDate.now();
 
+    /** Todas as barras abertas (Dashboard, Views, Rotinas), para manter os filtros iguais entre as abas. */
+    private static final List<BarraFiltros> TODAS = new ArrayList<>();
+
     public BarraFiltros(Runnable aoAplicar) {
         super(new FlowLayout(FlowLayout.LEFT, 8, 4));
         setBorder(BorderFactory.createTitledBorder("Filtros"));
@@ -34,10 +38,24 @@ public class BarraFiltros extends JPanel {
         add(ate);
         add(aplicar);
         add(limpar);
-        aplicar.addActionListener(e -> aoAplicar.run());
-        categoria.addActionListener(e -> { if (categoria.isFocusOwner()) aoAplicar.run(); });
-        limpar.addActionListener(e -> { reiniciar(); aoAplicar.run(); });
+        aplicar.addActionListener(e -> { sincronizar(); aoAplicar.run(); });
+        categoria.addActionListener(e -> { if (categoria.isFocusOwner()) { sincronizar(); aoAplicar.run(); } });
+        limpar.addActionListener(e -> { reiniciar(); sincronizar(); aoAplicar.run(); });
         recarregarOpcoes();
+        if (!TODAS.isEmpty()) copiarDe(TODAS.get(0));
+        TODAS.add(this);
+    }
+
+    /** Copia categoria e período desta barra para as barras das outras abas. */
+    private void sincronizar() {
+        for (BarraFiltros outra : TODAS) if (outra != this) outra.copiarDe(this);
+    }
+
+    private void copiarDe(BarraFiltros origem) {
+        Object cat = origem.codCategoria();
+        if (cat == null) categoria.setSelectedIndex(0); else Ui.selecionar(categoria, cat);
+        de.setValue(origem.de.getValue());
+        ate.setValue(origem.ate.getValue());
     }
 
     /** Lê as categorias e o intervalo de datas existente no banco (jogos, treinos e avaliações). */
