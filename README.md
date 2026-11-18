@@ -1,4 +1,10 @@
-# Academia de Base (Club Base) - Etapa 06 (versão final)
+# Academia de Base (Club Base)
+
+## Equipe
+* Arthur da Fonte
+* Bruno Santana
+* Matheus Fialho
+* Pablo Coelho
 
 Aplicação desktop em **Java (Swing) + JDBC** para o banco `academia_futebol` (MySQL).
 Todos os comandos SQL são escritos explicitamente e enviados com `PreparedStatement` / `CallableStatement`. Não usa ORM nem biblioteca de gráficos: os gráficos são desenhados com `Graphics2D`.
